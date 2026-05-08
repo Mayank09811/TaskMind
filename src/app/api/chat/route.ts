@@ -250,7 +250,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // Check if the user is submitting their morning to-do list
+    // Check if the user is submitting a new to-do list
     const parsedPointers = parsePointers(message);
     if (parsedPointers.length >= 1 && employeeId) {
       if (!dailyPlan) {
@@ -263,41 +263,41 @@ export async function POST(req: Request) {
         });
       }
 
-      if (dailyPlan.status === 'collecting' || dailyPlan.pointers.length === 0) {
-        let cumulativeMs = 0;
-        const now = new Date();
+      // Always overwrite the plan if new pointers are provided (allows restarting tests)
+      let cumulativeMs = 0;
+      const now = new Date();
 
-        dailyPlan.pointers = parsedPointers.map((p, i) => {
-          cumulativeMs += p.eta * 60 * 60 * 1000;
-          return {
-            title: p.title,
-            plannedETA: p.eta,
-            checkInTime: new Date(now.getTime() + cumulativeMs),
-            startedAt: i === 0 ? now : null,
-            completedAt: null,
-            actualTime: null,
-            status: i === 0 ? 'in_progress' : 'pending',
-            delayReason: null,
-            blocker: null,
-            extensions: [],
-          };
-        });
+      dailyPlan.pointers = parsedPointers.map((p, i) => {
+        cumulativeMs += p.eta * 60 * 60 * 1000;
+        return {
+          title: p.title,
+          plannedETA: p.eta,
+          checkInTime: new Date(now.getTime() + cumulativeMs),
+          startedAt: i === 0 ? now : null,
+          completedAt: null,
+          actualTime: null,
+          status: i === 0 ? 'in_progress' : 'pending',
+          delayReason: null,
+          blocker: null,
+          extensions: [],
+        };
+      });
 
-        dailyPlan.status = 'active';
-        dailyPlan.currentPointerIndex = 0;
-        await dailyPlan.save();
+      dailyPlan.status = 'active';
+      dailyPlan.currentPointerIndex = 0;
+      dailyPlan.eodReport.generated = false;
+      await dailyPlan.save();
 
-        // Schedule timer for first pointer
-        const firstEtaMs = parsedPointers[0].eta * 60 * 60 * 1000;
-        timerManager.scheduleCheckIn(
-          employeeId,
-          0,
-          parsedPointers[0].title,
-          firstEtaMs
-        );
+      // Schedule timer for first pointer
+      const firstEtaMs = parsedPointers[0].eta * 60 * 60 * 1000;
+      timerManager.scheduleCheckIn(
+        employeeId,
+        0,
+        parsedPointers[0].title,
+        firstEtaMs
+      );
 
-        actionTaken = `📋 Morning plan saved with ${parsedPointers.length} pointers. First timer set for "${parsedPointers[0].title}" (${parsedPointers[0].eta}h).`;
-      }
+      actionTaken = `📋 New plan saved with ${parsedPointers.length} pointers. First timer set for "${parsedPointers[0].title}" in ${parsedPointers[0].eta * 3600}s.`;
     }
 
     // Build the full prompt with context and action info
