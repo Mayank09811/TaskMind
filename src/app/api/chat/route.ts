@@ -338,10 +338,15 @@ export async function POST(req: Request) {
       systemInstruction: augmentedSystemPrompt,
     });
 
-    const formattedHistory = (history || []).map((msg: any) => ({
+    let formattedHistory = (history || []).map((msg: any) => ({
       role: msg.role === 'user' ? 'user' : 'model',
       parts: [{ text: msg.text }],
     }));
+
+    // Safeguard: Gemini history MUST start with a 'user' message
+    if (formattedHistory.length > 0 && formattedHistory[0].role === 'model') {
+      formattedHistory = formattedHistory.slice(1);
+    }
 
     const chat = model.startChat({
       history: formattedHistory,

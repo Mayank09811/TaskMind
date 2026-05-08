@@ -86,11 +86,12 @@ export default function ChatBox() {
 
     setIsLoading(true);
     try {
+      const userMsg = `Hi, I'm ${emp.name}. Starting my day.`;
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: `Hi, I'm ${emp.name}. Starting my day.`,
+          message: userMsg,
           history: [],
           employeeId: empId,
         }),
@@ -98,7 +99,10 @@ export default function ChatBox() {
 
       const data = await response.json();
       if (data.text) {
-        setMessages([{ role: 'model', text: data.text }]);
+        setMessages([
+          { role: 'user', text: userMsg },
+          { role: 'model', text: data.text }
+        ]);
         if (data.dailyPlanStatus) {
           setPlanInfo({
             status: data.dailyPlanStatus,
