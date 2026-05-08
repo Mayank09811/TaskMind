@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import Groq from "groq-sdk";
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import DailyPlan from "@/lib/models/DailyPlan";
@@ -113,11 +113,11 @@ function detectSmartKeywords(text: string): {
 export async function POST(req: Request) {
   try {
     const { message, history, employeeId } = await req.json();
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GROQ_API_KEY;
 
     if (!apiKey || apiKey === "your_api_key_here") {
       return NextResponse.json(
-        { error: "API Key not found. Please restart your server." },
+        { error: "Groq API Key not found. Please restart your server." },
         { status: 500 }
       );
     }
@@ -306,32 +306,26 @@ export async function POST(req: Request) {
       augmentedSystemPrompt += `\n\nACTION ALREADY TAKEN BY SYSTEM: ${actionTaken}\nAcknowledge this action naturally in your response.`;
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash-002",
-      systemInstruction: augmentedSystemPrompt,
-    });
+    const groq = new Groq({ apiKey });
 
     let formattedHistory = (history || []).map((msg: any) => ({
-      role: msg.role === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.text }],
+      role: msg.role === 'user' ? 'user' : 'assistant',
+      content: msg.text,
     }));
 
-    // Safeguard: Gemini history MUST start with a 'user' message
-    if (formattedHistory.length > 0 && formattedHistory[0].role === 'model') {
-      formattedHistory = formattedHistory.slice(1);
-    }
+    const messages = [
+      { role: "system", content: augmentedSystemPrompt },
+      ...formattedHistory,
+      { role: "user", content: message }
+    ];
 
-    const chat = model.startChat({
-      history: formattedHistory,
-      generationConfig: {
-        maxOutputTokens: 1500,
-      },
+    const chatCompletion = await groq.chat.completions.create({
+      messages: messages as any,
+      model: "llama3-8b-8192",
+      max_tokens: 1500,
     });
 
-    const result = await chat.sendMessage(message);
-    const response = await result.response;
-    const text = response.text();
+    const text = chatCompletion.choices[0]?.message?.content || "";
 
     // Return response with metadata
     return NextResponse.json({
