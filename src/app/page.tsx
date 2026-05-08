@@ -1,4 +1,5 @@
 import styles from './Dashboard.module.css';
+import ChatBox from '@/components/ChatBox';
 
 export default function Home() {
   return (
@@ -43,7 +44,7 @@ export default function Home() {
         <section className={styles.content}>
           <div className={styles.hero}>
             <h1>Welcome back, <span className="gradient-text">Mayank</span></h1>
-            <p>Your TaskMind has analyzed 12 new updates since your last visit.</p>
+            <p>Your AI assistant has analyzed 12 new updates since your last visit.</p>
           </div>
 
           <div className={styles.statsGrid}>
@@ -101,23 +102,22 @@ export default function Home() {
               </div>
             </div>
 
-            <div className={`${styles.botStatus} glass-panel`}>
-              <h3>Bot Status</h3>
-              <div className={styles.statusPulse}></div>
-              <p>System Online</p>
-              <div className={styles.botSpecs}>
-                <div className={styles.spec}>
-                  <span>Model</span>
-                  <span>GPT-4o Optim</span>
+            <div className={styles.rightColumn}>
+              <div className={`${styles.botStatus} glass-panel`}>
+                <h3>Bot Status</h3>
+                <div className={styles.statusRow}>
+                  <div className={styles.statusPulse}></div>
+                  <p>System Online</p>
                 </div>
-                <div className={styles.spec}>
-                  <span>Latency</span>
-                  <span>42ms</span>
+                <div className={styles.botSpecs}>
+                  <div className={styles.spec}>
+                    <span>Model</span>
+                    <span>Gemini 1.5 Flash</span>
+                  </div>
                 </div>
               </div>
-              <button className="btn-primary" style={{ width: '100%', marginTop: '1rem' }}>
-                Open AI Command Center
-              </button>
+              
+              <ChatBox />
             </div>
           </div>
         </section>

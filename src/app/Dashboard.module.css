@@ -164,6 +164,18 @@
   gap: 32px;
 }
 
+.rightColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .recentActivity, .botStatus {
   padding: 24px;
 }
