@@ -251,8 +251,11 @@ export async function POST(req: Request) {
     }
 
     // Check if the user is submitting a new to-do list
+    // Only allow overwriting the plan if we are starting fresh or testing a new round
+    const shouldParseNewPlan = !dailyPlan || dailyPlan.status === 'collecting' || dailyPlan.status === 'completed';
     const parsedPointers = parsePointers(message);
-    if (parsedPointers.length >= 1 && employeeId) {
+    
+    if (shouldParseNewPlan && parsedPointers.length >= 1 && employeeId) {
       if (!dailyPlan) {
         dailyPlan = new DailyPlan({
           employee: employeeId,
