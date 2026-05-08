@@ -1,24 +1,30 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-
 export async function POST(req: Request) {
   try {
     const { message, history } = await req.json();
+    const apiKey = process.env.GEMINI_API_KEY;
 
-    if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === "your_api_key_here") {
+    if (!apiKey || apiKey === "your_api_key_here") {
+      console.error("GEMINI_API_KEY is not set or is still the placeholder.");
       return NextResponse.json(
-        { error: "API Key not configured. Please add your GEMINI_API_KEY to .env.local" },
+        { error: "API Key not found. Please restart your 'npm run dev' server to load the .env.local file." },
         { status: 500 }
       );
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-    // Set a system instruction for the PM-Bot personality
+    // Ensure history is in the format Gemini expects
+    const formattedHistory = (history || []).map((msg: any) => ({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.text }],
+    }));
+
     const chat = model.startChat({
-      history: history || [],
+      history: formattedHistory,
       generationConfig: {
         maxOutputTokens: 1000,
       },
@@ -30,7 +36,10 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ text });
   } catch (error: any) {
-    console.error("Chat API Error:", error);
-    return NextResponse.json({ error: "Failed to fetch response from AI" }, { status: 500 });
+    console.error("Gemini API Error:", error.message || error);
+    return NextResponse.json(
+      { error: "AI Service Error: " + (error.message || "Failed to get response") },
+      { status: 500 }
+    );
   }
 }

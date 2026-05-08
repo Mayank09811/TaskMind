@@ -112,7 +112,7 @@ export default function Home() {
                 <div className={styles.botSpecs}>
                   <div className={styles.spec}>
                     <span>Model</span>
-                    <span>Gemini 1.5 Flash</span>
+                    <span>Gemini 2.5 Flash</span>
                   </div>
                 </div>
               </div>
