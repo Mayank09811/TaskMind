@@ -1,4 +1,4 @@
-# PM-Bot 🤖
+# TaskMind 🤖
 
 A premium, AI-driven Project Management Dashboard built with Next.js.
 
@@ -32,10 +32,10 @@ A premium, AI-driven Project Management Dashboard built with Next.js.
 
 To push this project to your public GitHub repository:
 
-1. **Create a new public repository** on GitHub named `pm-bot`.
+1. **Create a new public repository** on GitHub named `taskmind`.
 2. **Link the local repository**:
    ```bash
-   git remote add origin https://github.com/Mayank09811/pm-bot.git
+   git remote add origin https://github.com/Mayank09811/taskmind.git
    ```
 3. **Push your code**:
    ```bash

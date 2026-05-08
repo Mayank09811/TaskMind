@@ -7,7 +7,7 @@ export default function Home() {
       <aside className={styles.sidebar}>
         <div className={styles.logo}>
           <div className={styles.botIcon}>🤖</div>
-          <span className="gradient-text">PM-Bot</span>
+          <span className="gradient-text">TaskMind</span>
         </div>
         <nav className={styles.nav}>
           <div className={`${styles.navItem} ${styles.active}`}>
@@ -43,7 +43,7 @@ export default function Home() {
         <section className={styles.content}>
           <div className={styles.hero}>
             <h1>Welcome back, <span className="gradient-text">Mayank</span></h1>
-            <p>Your PM-Bot has analyzed 12 new updates since your last visit.</p>
+            <p>Your TaskMind has analyzed 12 new updates since your last visit.</p>
           </div>
 
           <div className={styles.statsGrid}>
@@ -80,7 +80,7 @@ export default function Home() {
                 <div className={styles.activityItem}>
                   <div className={styles.activityDot}></div>
                   <div className={styles.activityInfo}>
-                    <strong>PM-Bot</strong> optimized the roadmap for Project Alpha.
+                    <strong>TaskMind</strong> optimized the roadmap for Project Alpha.
                     <span>2 hours ago</span>
                   </div>
                 </div>
