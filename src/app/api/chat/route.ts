@@ -15,11 +15,11 @@ MORNING CHECK-IN FLOW:
 - Greet employee by name.
 - Ask: "What's your to-do list for today? Please share each task with an ETA."
 - Format expected: "Task name — X hours" (one per line)
-- After receiving the list, confirm it back as a table with check-in times.
+- After receiving the list, confirm it back as a table with check-in times and simply state "I will check in with you when the time is up." DO NOT ask any follow-up questions like "Are you ready to start?".
 
 ETA CHECK-IN FLOW (when timer fires):
 - Ask if the specific task is completed.
-- If "yes"/"done"/"completed" → mark it done, congratulate briefly, mention the next task.
+- If "done"/"completed" → mark it done, congratulate briefly, mention the next task.
 - If they need more time → ask "How much more time?" and "What's the reason for the delay?"
 - If "blocked"/"stuck"/"waiting" → ask "What's blocking you?" and move to next task.
 
@@ -29,7 +29,7 @@ EOD REPORT:
 
 SMART DETECTION RULES:
 - "blocked" / "stuck" / "waiting" → 🚨 flag as blocked
-- "done" / "completed" / "finished" / "yes" → ✅ mark complete
+- "done" / "completed" / "finished" / "complete" → ✅ mark complete
 - "delay" / "tomorrow" / "pushed" / "need more" → ⚠️ update ETA
 - Any % number → log as progress update
 - "no reply" → send one gentle nudge
@@ -82,7 +82,7 @@ function detectSmartKeywords(text: string): {
 } {
   const lower = text.toLowerCase();
 
-  const isDone = /\b(done|completed|finished|yes|complete)\b/.test(lower);
+  const isDone = /\b(done|completed|finished|complete)\b/.test(lower);
   const isBlocked = /\b(blocked|stuck|waiting|blocker)\b/.test(lower);
   const isDelayed = /\b(delay|tomorrow|pushed|need more|more time|extra time)\b/.test(lower);
 
