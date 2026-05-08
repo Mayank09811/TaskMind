@@ -52,13 +52,19 @@ function parsePointers(text: string): { title: string; eta: number }[] {
   const lines = text.split('\n');
 
   for (const line of lines) {
-    // Match patterns like: "Creating dashboard — 1.5 hours" or "1. API integration - 2h"
-    const match = line.match(/(?:\d+[\.\)]\s*)?(.+?)(?:—|-|–)\s*(\d+\.?\d*)\s*(?:hours?|hrs?|h)/i);
+    // Match patterns like: "Creating dashboard — 1.5 hours" or "Test — 1 min"
+    const match = line.match(/(?:\d+[\.\)]\s*)?(.+?)(?:—|-|–)\s*(\d+\.?\d*)\s*(hours?|hrs?|h|minutes?|mins?|m)/i);
     if (match) {
-      pointers.push({
-        title: match[1].trim(),
-        eta: parseFloat(match[2]),
-      });
+      const title = match[1].trim();
+      let eta = parseFloat(match[2]);
+      const unit = match[3].toLowerCase();
+
+      // Convert minutes to hours for internal storage
+      if (unit.startsWith('m')) {
+        eta = eta / 60;
+      }
+
+      pointers.push({ title, eta });
     }
   }
 
