@@ -74,7 +74,7 @@ export default function ChatBox() {
       } catch (e) {
         // Silent fail for polling
       }
-    }, 10000);
+    }, 2000);
 
     return () => clearInterval(interval);
   }, [selectedEmployee]);

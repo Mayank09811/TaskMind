@@ -38,14 +38,15 @@ class TimerManager {
     delayMs: number
   ): void {
     const key = this.getKey(employeeId, pointerIndex);
+    console.log(`[TimerManager] Scheduling: "${pointerTitle}" for Employee: ${employeeId} in ${Math.round(delayMs/1000)}s`);
 
-    // Clear existing timer for this key
     this.clearTimer(key);
 
     const timer = setTimeout(() => {
+      console.log(`[TimerManager] 🔥 TIMER FIRED for "${pointerTitle}" (Employee: ${employeeId})`);
       const notification: TimerNotification = {
         id: `${key}_${Date.now()}`,
-        employeeId,
+        employeeId: employeeId.toString(), // Ensure string
         pointerIndex,
         pointerTitle,
         type: 'check_in',
@@ -55,9 +56,6 @@ class TimerManager {
       };
 
       this.notifications.push(notification);
-      console.log(`🔔 Timer fired for employee ${employeeId}, pointer: "${pointerTitle}"`);
-
-      // Clean up the timer reference
       this.timers.delete(key);
     }, delayMs);
 
@@ -92,9 +90,14 @@ class TimerManager {
    * Get unread notifications for an employee
    */
   getNotifications(employeeId: string): TimerNotification[] {
-    return this.notifications.filter(
-      (n) => n.employeeId === employeeId && !n.read
+    const empIdStr = employeeId.toString();
+    const found = this.notifications.filter(
+      (n) => n.employeeId === empIdStr && !n.read
     );
+    if (found.length > 0) {
+      console.log(`[TimerManager] Delivering ${found.length} notifications to Employee: ${empIdStr}`);
+    }
+    return found;
   }
 
   /**

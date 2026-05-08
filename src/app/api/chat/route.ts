@@ -52,16 +52,18 @@ function parsePointers(text: string): { title: string; eta: number }[] {
   const lines = text.split('\n');
 
   for (const line of lines) {
-    // Match patterns like: "Creating dashboard — 1.5 hours" or "Test — 1 min"
-    const match = line.match(/(?:\d+[\.\)]\s*)?(.+?)(?:—|-|–)\s*(\d+\.?\d*)\s*(hours?|hrs?|h|minutes?|mins?|m)/i);
+    // Match patterns like: "Creating dashboard — 1.5 hours" or "Test — 10s"
+    const match = line.match(/(?:\d+[\.\)]\s*)?(.+?)(?:—|-|–)\s*(\d+\.?\d*)\s*(hours?|hrs?|h|minutes?|mins?|m|seconds?|secs?|s)/i);
     if (match) {
       const title = match[1].trim();
       let eta = parseFloat(match[2]);
       const unit = match[3].toLowerCase();
 
-      // Convert minutes to hours for internal storage
+      // Convert to hours for internal storage
       if (unit.startsWith('m')) {
         eta = eta / 60;
+      } else if (unit.startsWith('s')) {
+        eta = eta / 3600;
       }
 
       pointers.push({ title, eta });
@@ -84,14 +86,18 @@ function detectSmartKeywords(text: string): {
   const isBlocked = /\b(blocked|stuck|waiting|blocker)\b/.test(lower);
   const isDelayed = /\b(delay|tomorrow|pushed|need more|more time|extra time)\b/.test(lower);
 
-  // Extract extra time: "30 minutes", "1 hour", "1.5h"
+  // Extract extra time: "30 minutes", "1 hour", "10s"
   let extraTime: number | null = null;
   const timeMatch = lower.match(/(\d+\.?\d*)\s*(?:more\s+)?(?:minutes?|mins?|m)\b/);
   const hourMatch = lower.match(/(\d+\.?\d*)\s*(?:more\s+)?(?:hours?|hrs?|h)\b/);
+  const secMatch = lower.match(/(\d+\.?\d*)\s*(?:more\s+)?(?:seconds?|secs?|s)\b/);
+  
   if (timeMatch) {
-    extraTime = parseFloat(timeMatch[1]) / 60; // convert to hours
+    extraTime = parseFloat(timeMatch[1]) / 60;
   } else if (hourMatch) {
     extraTime = parseFloat(hourMatch[1]);
+  } else if (secMatch) {
+    extraTime = parseFloat(secMatch[1]) / 3600;
   }
 
   // Extract progress percentage
@@ -172,94 +178,56 @@ export async function POST(req: Request) {
 
       if (currentPointer && currentPointer.status === 'in_progress') {
         if (detection.isDone) {
-          // Mark current pointer as done
+          // ... [Done logic remains same]
           currentPointer.status = 'done';
           currentPointer.completedAt = new Date();
           if (currentPointer.startedAt) {
             currentPointer.actualTime =
               (new Date().getTime() - new Date(currentPointer.startedAt).getTime()) / (1000 * 60 * 60);
           }
-
-          // Clear timer
           timerManager.clearTimer(`${employeeId}_${currentIdx}`);
-
-          // Move to next pointer
-          const nextIdx = dailyPlan.pointers.findIndex(
-            (p, i) => i > currentIdx && p.status !== 'done' && p.status !== 'blocked'
-          );
-
+          const nextIdx = dailyPlan.pointers.findIndex((p, i) => i > currentIdx && p.status !== 'done' && p.status !== 'blocked');
           if (nextIdx !== -1) {
             dailyPlan.currentPointerIndex = nextIdx;
             dailyPlan.pointers[nextIdx].status = 'in_progress';
             dailyPlan.pointers[nextIdx].startedAt = new Date();
-
-            // Schedule timer for next pointer
             const delayMs = dailyPlan.pointers[nextIdx].plannedETA * 60 * 60 * 1000;
-            timerManager.scheduleCheckIn(
-              employeeId,
-              nextIdx,
-              dailyPlan.pointers[nextIdx].title,
-              delayMs
-            );
-
+            timerManager.scheduleCheckIn(employeeId, nextIdx, dailyPlan.pointers[nextIdx].title, delayMs);
             actionTaken = `✅ Marked "${currentPointer.title}" as DONE. Started timer for "${dailyPlan.pointers[nextIdx].title}".`;
           } else {
-            // All done! Generate EOD
             dailyPlan.status = 'completed';
             dailyPlan.eodReport.generated = true;
             dailyPlan.eodReport.generatedAt = new Date();
-
-            const summary = dailyPlan.pointers
-              .map((p, i) => `${i + 1}. ${p.title} — ${p.status} — Planned: ${p.plannedETA}h, Actual: ${p.actualTime?.toFixed(1) || 'N/A'}h`)
-              .join('\n');
-            dailyPlan.eodReport.summary = summary;
+            dailyPlan.eodReport.summary = dailyPlan.pointers.map((p, i) => `${i + 1}. ${p.title} — ${p.status}`).join('\n');
             actionTaken = `✅ All pointers completed! EOD report generated.`;
           }
-
           await dailyPlan.save();
-        } else if (detection.isBlocked) {
+        } 
+        // PRIORITIZE DELAY: If extra time is specified, it's a delay, even if the word 'blocker' is used.
+        else if (detection.isDelayed && detection.extraTime) {
+          currentPointer.status = 'delayed';
+          currentPointer.extensions.push({
+            extraTime: detection.extraTime,
+            reason: message, // Save the whole message as reason
+            requestedAt: new Date(),
+          });
+          const delayMs = detection.extraTime * 60 * 60 * 1000;
+          timerManager.scheduleCheckIn(employeeId, currentIdx, currentPointer.title, delayMs);
+          actionTaken = `⚠️ Extended "${currentPointer.title}" by ${detection.extraTime.toFixed(2)}h. Timer rescheduled.`;
+          await dailyPlan.save();
+        }
+        else if (detection.isBlocked) {
           currentPointer.status = 'blocked';
           timerManager.clearTimer(`${employeeId}_${currentIdx}`);
-
-          // Move to next
-          const nextIdx = dailyPlan.pointers.findIndex(
-            (p, i) => i > currentIdx && p.status !== 'done' && p.status !== 'blocked'
-          );
-
+          const nextIdx = dailyPlan.pointers.findIndex((p, i) => i > currentIdx && p.status !== 'done' && p.status !== 'blocked');
           if (nextIdx !== -1) {
             dailyPlan.currentPointerIndex = nextIdx;
             dailyPlan.pointers[nextIdx].status = 'in_progress';
             dailyPlan.pointers[nextIdx].startedAt = new Date();
-
             const delayMs = dailyPlan.pointers[nextIdx].plannedETA * 60 * 60 * 1000;
-            timerManager.scheduleCheckIn(
-              employeeId,
-              nextIdx,
-              dailyPlan.pointers[nextIdx].title,
-              delayMs
-            );
+            timerManager.scheduleCheckIn(employeeId, nextIdx, dailyPlan.pointers[nextIdx].title, delayMs);
           }
-
-          actionTaken = `🚨 Marked "${currentPointer.title}" as BLOCKED. Ask for blocker details.`;
-          await dailyPlan.save();
-        } else if (detection.isDelayed && detection.extraTime) {
-          currentPointer.status = 'delayed';
-          currentPointer.extensions.push({
-            extraTime: detection.extraTime,
-            reason: '',  // Will be filled when employee provides reason
-            requestedAt: new Date(),
-          });
-
-          // Reschedule timer with extra time
-          const delayMs = detection.extraTime * 60 * 60 * 1000;
-          timerManager.scheduleCheckIn(
-            employeeId,
-            currentIdx,
-            currentPointer.title,
-            delayMs
-          );
-
-          actionTaken = `⚠️ Extended "${currentPointer.title}" by ${detection.extraTime}h. Timer rescheduled. Ask for reason.`;
+          actionTaken = `🚨 Marked "${currentPointer.title}" as BLOCKED. Moving to next pointer.`;
           await dailyPlan.save();
         }
       }
