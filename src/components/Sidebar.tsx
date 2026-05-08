@@ -32,7 +32,7 @@ export default function Sidebar() {
       </nav>
       <div className={styles.botStatusMini}>
         <div className={styles.statusDot}></div>
-        <span>Gemini 2.5 Flash</span>
+        <span>Gemini 1.5 Flash</span>
       </div>
     </aside>
   );
